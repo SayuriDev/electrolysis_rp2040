@@ -1,9 +1,15 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
+#include "hardware/i2c.h"
 
 #define BUZZER_GPIO 0
 #define CHARGE_PUMP_1_GPIO 2  // slice 1, channel A
 #define CHARGE_PUMP_2_GPIO 3  // slice 1, channel B
+#define SDA_GPIO 4
+#define SCL_GPIO 5
+
+#define I2C_PORT i2c0
+#define I2C_BAUDRATE (400 * 1000) // fast mode (400kHz)
 
 int main() {
     gpio_init(BUZZER_GPIO);
@@ -22,6 +28,14 @@ int main() {
     pwm_set_chan_level(charge_pump_pwm_slice, PWM_CHAN_B, 500);
 
     pwm_set_enabled(charge_pump_pwm_slice, true);
+
+    // setup i2c
+    i2c_init(I2C_PORT, I2C_BAUDRATE);
+    gpio_set_function(SDA_GPIO, GPIO_FUNC_I2C);
+    gpio_set_function(SCL_GPIO, GPIO_FUNC_I2C);
+
+    gpio_set_pulls(SDA_GPIO, true, false);
+    gpio_set_pulls(SCL_GPIO, true, false);
 
     while (true) {
         tight_loop_contents();
