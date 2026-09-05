@@ -5,6 +5,8 @@
 #define BUZZER_GPIO 0
 #define CHARGE_PUMP_1_GPIO 2  // slice 1, channel A
 #define CHARGE_PUMP_2_GPIO 3  // slice 1, channel B
+#define FOOTSWITCH_GPIO 17
+#define USER_BUTTON_GPIO 18
 #define SDA_GPIO 4
 #define SCL_GPIO 5
 
@@ -58,6 +60,17 @@ int main() {
 
     gpio_set_pulls(SDA_GPIO, true, false);
     gpio_set_pulls(SCL_GPIO, true, false);
+
+    gpio_init(FOOTSWITCH_GPIO);
+    gpio_set_dir(FOOTSWITCH_GPIO, GPIO_IN);
+    gpio_pull_up(FOOTSWITCH_GPIO);
+    // bool is_pressed = !gpio_get(FOOTSWITCH_GPIO);
+
+    gpio_init(USER_BUTTON_GPIO);
+    gpio_set_dir(USER_BUTTON_GPIO, GPIO_IN);
+    gpio_pull_up(USER_BUTTON_GPIO);
+    // bool is_pressed = !gpio_get(USER_BUTTON_GPIO);
+
 
     while (true) {
         tight_loop_contents();
