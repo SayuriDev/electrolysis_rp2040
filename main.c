@@ -8,10 +8,32 @@
 #define SDA_GPIO 4
 #define SCL_GPIO 5
 
+#define MUX_S0_GPIO 12
+#define MUX_S1_GPIO 11
+#define MUX_S2_GPIO 10
+
 #define I2C_PORT i2c0
 #define I2C_BAUDRATE (400 * 1000) // fast mode (400kHz)
 
+static void mux_init(void) {
+    gpio_init(MUX_S0_GPIO);
+    gpio_set_dir(MUX_S0_GPIO, GPIO_OUT);
+
+    gpio_init(MUX_S1_GPIO);
+    gpio_set_dir(MUX_S1_GPIO, GPIO_OUT);
+
+    gpio_init(MUX_S2_GPIO);
+    gpio_set_dir(MUX_S2_GPIO, GPIO_OUT);
+}
+
+static void mux_select(uint8_t channel) { // channel range: 0-7 (A0-A7 pins)
+    gpio_put(MUX_S0_GPIO, channel & 1);
+    gpio_put(MUX_S1_GPIO, (channel >> 1) & 1);
+    gpio_put(MUX_S2_GPIO, (channel >> 2) & 1);
+}
+
 int main() {
+    mux_init();
     gpio_init(BUZZER_GPIO);
     gpio_set_dir(BUZZER_GPIO, GPIO_OUT);
 
