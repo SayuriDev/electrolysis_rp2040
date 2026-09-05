@@ -12,16 +12,16 @@ int main() {
     const uint charge_pump_2_gpio = 3; // slice 1, channel B
     gpio_set_function(charge_pump_2_gpio, GPIO_FUNC_PWM);
 
-    uint pwm_slice_num = pwm_gpio_to_slice_num(charge_pump_1_gpio);
-    pwm_set_clkdiv(pwm_slice_num, 125.0f);
-    pwm_set_wrap(pwm_slice_num, 999);
+    uint charge_pump_pwm_slice = pwm_gpio_to_slice_num(charge_pump_1_gpio);
+    pwm_set_clkdiv(charge_pump_pwm_slice, 125.0f);
+    pwm_set_wrap(charge_pump_pwm_slice, 999);
 
-    pwm_set_output_invert(pwm_slice_num, false, true); // invert channel B
+    pwm_set_output_polarity(charge_pump_pwm_slice, false, true); // invert channel B
     
-    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_A, 500);
-    pwm_set_chan_level(pwm_slice_num, PWM_CHAN_B, 500);
+    pwm_set_chan_level(charge_pump_pwm_slice, PWM_CHAN_A, 500);
+    pwm_set_chan_level(charge_pump_pwm_slice, PWM_CHAN_B, 500);
 
-    pwm_set_enabled(pwm_slice_num, true);
+    pwm_set_enabled(charge_pump_pwm_slice, true);
 
     while (true) {
         tight_loop_contents();
