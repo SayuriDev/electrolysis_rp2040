@@ -1,18 +1,18 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 
+#define BUZZER_GPIO 0
+#define CHARGE_PUMP_1_GPIO 2  // slice 1, channel A
+#define CHARGE_PUMP_2_GPIO 3  // slice 1, channel B
+
 int main() {
-    const uint buzzer_gpio = 0;
-    gpio_init(buzzer_gpio);
-    gpio_set_dir(buzzer_gpio, GPIO_OUT);
+    gpio_init(BUZZER_GPIO);
+    gpio_set_dir(BUZZER_GPIO, GPIO_OUT);
 
-    const uint charge_pump_1_gpio = 2; // slice 1, channel A
-    gpio_set_function(charge_pump_1_gpio, GPIO_FUNC_PWM);
+    gpio_set_function(CHARGE_PUMP_1_GPIO, GPIO_FUNC_PWM);
+    gpio_set_function(CHARGE_PUMP_2_GPIO, GPIO_FUNC_PWM);
 
-    const uint charge_pump_2_gpio = 3; // slice 1, channel B
-    gpio_set_function(charge_pump_2_gpio, GPIO_FUNC_PWM);
-
-    uint charge_pump_pwm_slice = pwm_gpio_to_slice_num(charge_pump_1_gpio);
+    uint charge_pump_pwm_slice = pwm_gpio_to_slice_num(CHARGE_PUMP_1_GPIO);
     pwm_set_clkdiv(charge_pump_pwm_slice, 125.0f);
     pwm_set_wrap(charge_pump_pwm_slice, 999);
 
