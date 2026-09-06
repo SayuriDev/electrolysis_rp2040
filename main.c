@@ -1,6 +1,7 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/i2c.h"
+#include "hardware/adc.h"
 
 #define BUZZER_GPIO 0
 #define CHARGE_PUMP_1_GPIO 2  // slice 1, channel A
@@ -13,6 +14,11 @@
 #define MUX_S0_GPIO 12
 #define MUX_S1_GPIO 11
 #define MUX_S2_GPIO 10
+
+#define ADC_POTENTIOMETER_1_GPIO 26
+#define ADC_POTENTIOMETER_2_GPIO 27
+#define ADC_PROBE_GPIO 28
+#define ADC_MUX_GPIO 29
 
 #define I2C_PORT i2c0
 #define I2C_BAUDRATE (400 * 1000) // fast mode (400kHz)
@@ -35,6 +41,7 @@ static void mux_select(uint8_t channel) { // channel range: 0-7 (A0-A7 pins)
 }
 
 int main() {
+    adc_init();
     mux_init();
     gpio_init(BUZZER_GPIO);
     gpio_set_dir(BUZZER_GPIO, GPIO_OUT);
