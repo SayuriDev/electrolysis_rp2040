@@ -23,6 +23,11 @@
 #define I2C_PORT i2c0
 #define I2C_BAUDRATE (400 * 1000) // fast mode (400kHz)
 
+static struct repeating_timer adc_timer;
+
+static uint16_t adc[3];
+static uint16_t mux[3];
+
 static void mux_init(void) {
     gpio_init(MUX_S0_GPIO);
     gpio_set_dir(MUX_S0_GPIO, GPIO_OUT);
@@ -40,11 +45,50 @@ static void mux_select(uint8_t channel) { // channel range: 0-7 (A0-A7 pins)
     gpio_put(MUX_S2_GPIO, (channel >> 2) & 1);
 }
 
+/*
+ *   adc[0] -> potentiometer_1
+ *   adc[1] -> potentiometer_2
+ *   adc[2] -> probe
+ *
+ *   mux[0] -> battery_voltage
+ *   mux[1] -> battery_charging
+ *   mux[2] -> positive probe
+ */
+static void read_adc_values(uint16_t adc[3], uint16_t mux[3]) {
+    // adc channels 0-2
+    for (uint8_t i = 0; i < 3; i++) {
+        adc_select_input(i);
+        adc[i] = adc_read();
+    }
+
+    // mux channels 0-2
+    adc_select_input(3);
+    for (uint8_t i = 0; i < 3; i++) {
+        mux_select(i);
+        busy_wait_us(1);
+        adc_read(); // dummy read
+        mux[i] = adc_read();
+    }
+}
+ 
+static bool adc_timer_callback(struct repeating_timer *t) {
+    (void)t;
+    read_adc_values(adc, mux);
+    return true;
+}
+
 int main() {
     adc_init();
+    adc_gpio_init(ADC_POTENTIOMETER_1_GPIO);
+    adc_gpio_init(ADC_POTENTIOMETER_2_GPIO);
+    adc_gpio_init(ADC_PROBE_GPIO);
+    adc_gpio_init(ADC_MUX_GPIO);
     mux_init();
+    
     gpio_init(BUZZER_GPIO);
     gpio_set_dir(BUZZER_GPIO, GPIO_OUT);
+    
+    add_repeating_timer_us(100, adc_timer_callback, NULL, &adc_timer);
 
     gpio_set_function(CHARGE_PUMP_1_GPIO, GPIO_FUNC_PWM);
     gpio_set_function(CHARGE_PUMP_2_GPIO, GPIO_FUNC_PWM);
