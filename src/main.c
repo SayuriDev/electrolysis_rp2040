@@ -2,12 +2,12 @@
 #include "hardware/pwm.h"
 #include "hardware/i2c.h"
 #include "hardware/adc.h"
-#include "oled.h"
 
-#define BUZZER_GPIO 0
+#include "oled.h"
+#include "probe.h"
+
 #define CHARGE_PUMP_1_GPIO 2  // slice 1, channel A
 #define CHARGE_PUMP_2_GPIO 3  // slice 1, channel B
-#define FOOTSWITCH_GPIO 17
 #define USER_BUTTON_GPIO 18
 #define SDA_GPIO 4
 #define SCL_GPIO 5
@@ -79,8 +79,7 @@ static bool adc_timer_callback(struct repeating_timer *t) {
     return true;
 }
 
-static bool oled_timer_callback(struct repeating_timer *t)
-{
+static bool oled_timer_callback(struct repeating_timer *t) {
     (void)t;
     oled_main_screen();
     return true;
@@ -93,12 +92,6 @@ int main() {
     adc_gpio_init(ADC_PROBE_GPIO);
     adc_gpio_init(ADC_MUX_GPIO);
     mux_init();
-    
-    add_repeating_timer_us(100, adc_timer_callback, NULL, &adc_timer);
-    add_repeating_timer_ms(100, oled_timer_callback, NULL, &oled_timer);
-    
-    gpio_init(BUZZER_GPIO);
-    gpio_set_dir(BUZZER_GPIO, GPIO_OUT);
 
     gpio_set_function(CHARGE_PUMP_1_GPIO, GPIO_FUNC_PWM);
     gpio_set_function(CHARGE_PUMP_2_GPIO, GPIO_FUNC_PWM);
@@ -108,7 +101,7 @@ int main() {
     pwm_set_wrap(charge_pump_pwm_slice, 999);
 
     pwm_set_output_polarity(charge_pump_pwm_slice, false, true); // invert channel B
-    
+
     pwm_set_chan_level(charge_pump_pwm_slice, PWM_CHAN_A, 500);
     pwm_set_chan_level(charge_pump_pwm_slice, PWM_CHAN_B, 500);
 
@@ -122,18 +115,16 @@ int main() {
     gpio_set_pulls(SDA_GPIO, true, false);
     gpio_set_pulls(SCL_GPIO, true, false);
 
-    gpio_init(FOOTSWITCH_GPIO);
-    gpio_set_dir(FOOTSWITCH_GPIO, GPIO_IN);
-    gpio_pull_up(FOOTSWITCH_GPIO);
-    // bool is_pressed = !gpio_get(FOOTSWITCH_GPIO);
-
     gpio_init(USER_BUTTON_GPIO);
     gpio_set_dir(USER_BUTTON_GPIO, GPIO_IN);
     gpio_pull_up(USER_BUTTON_GPIO);
+
+    probe_init(adc);
+    add_repeating_timer_us(100, adc_timer_callback, NULL, &adc_timer);
+    add_repeating_timer_ms(100, oled_timer_callback, NULL, &oled_timer);
     // bool is_pressed = !gpio_get(USER_BUTTON_GPIO);
 
-
     while (true) {
-        tight_loop_contents();
+        probe_update();
     }
 }
