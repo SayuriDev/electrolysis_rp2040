@@ -2,6 +2,7 @@
 #include "hardware/pwm.h"
 #include "hardware/i2c.h"
 #include "hardware/adc.h"
+#include "oled.h"
 
 #define BUZZER_GPIO 0
 #define CHARGE_PUMP_1_GPIO 2  // slice 1, channel A
@@ -24,6 +25,7 @@
 #define I2C_BAUDRATE (400 * 1000) // fast mode (400kHz)
 
 static struct repeating_timer adc_timer;
+static struct repeating_timer oled_timer;
 
 static uint16_t adc[3];
 static uint16_t mux[3];
@@ -77,6 +79,13 @@ static bool adc_timer_callback(struct repeating_timer *t) {
     return true;
 }
 
+static bool oled_timer_callback(struct repeating_timer *t)
+{
+    (void)t;
+    oled_main_screen();
+    return true;
+}
+
 int main() {
     adc_init();
     adc_gpio_init(ADC_POTENTIOMETER_1_GPIO);
@@ -85,10 +94,11 @@ int main() {
     adc_gpio_init(ADC_MUX_GPIO);
     mux_init();
     
+    add_repeating_timer_us(100, adc_timer_callback, NULL, &adc_timer);
+    add_repeating_timer_ms(100, oled_timer_callback, NULL, &oled_timer);
+    
     gpio_init(BUZZER_GPIO);
     gpio_set_dir(BUZZER_GPIO, GPIO_OUT);
-    
-    add_repeating_timer_us(100, adc_timer_callback, NULL, &adc_timer);
 
     gpio_set_function(CHARGE_PUMP_1_GPIO, GPIO_FUNC_PWM);
     gpio_set_function(CHARGE_PUMP_2_GPIO, GPIO_FUNC_PWM);

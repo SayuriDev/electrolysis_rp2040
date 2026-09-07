@@ -11,8 +11,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 pico_sdk_init()
 
+add_subdirectory(u8g2)
+
 add_executable(${PROJECT_NAME}
         src/main.c
+        src/oled.c
         )
 
 pico_add_extra_outputs(${PROJECT_NAME})
@@ -22,4 +25,7 @@ target_link_libraries(${PROJECT_NAME}
     hardware_pwm
     hardware_i2c
     hardware_adc
+    u8g2
 )
+
+pico_add_extra_outputs(${PROJECT_NAME})
