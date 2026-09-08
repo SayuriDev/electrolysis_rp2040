@@ -27,4 +27,23 @@ target_link_libraries(${PROJECT_NAME}
     u8g2
 )
 
+# no need to optimise for size as the project is relatively small
+target_compile_options(${PROJECT_NAME} PRIVATE
+    -ffunction-sections
+    -fdata-sections
+    -O2
+)
+
+target_compile_options(u8g2 PRIVATE
+    -ffunction-sections
+    -fdata-sections
+    -O2
+)
+
+target_link_options(${PROJECT_NAME} PRIVATE
+    -Wl,--gc-sections
+    -Wl,--print-gc-sections
+)
+
+
 pico_add_extra_outputs(${PROJECT_NAME})

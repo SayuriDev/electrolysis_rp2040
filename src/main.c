@@ -119,6 +119,8 @@ int main() {
     gpio_set_dir(USER_BUTTON_GPIO, GPIO_IN);
     gpio_pull_up(USER_BUTTON_GPIO);
 
+    oled_init(adc, mux);
+    
     probe_init(adc);
     add_repeating_timer_us(100, adc_timer_callback, NULL, &adc_timer);
     add_repeating_timer_ms(100, oled_timer_callback, NULL, &oled_timer);
