@@ -14,10 +14,10 @@ pico_sdk_init()
 add_subdirectory(u8g2)
 
 add_executable(${PROJECT_NAME}
-        src/main.c
-        src/oled.c
-        src/probe.c
-        )
+    src/main.c
+    src/oled.c
+    src/probe.c
+)
 
 target_link_libraries(${PROJECT_NAME}
     pico_stdlib
