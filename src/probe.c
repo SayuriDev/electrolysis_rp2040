@@ -80,7 +80,7 @@ static int64_t probe_timer_callback(alarm_id_t id, void *user_data) {
     // footswitch released
     if (gpio_get(FOOTSWITCH_GPIO)) return 0;
 
-    mcp4726_set_voltage(adc_values[1]);
+    mcp4726_set_voltage(adc_values[1] * 866 / 1000);
 
     // check again in case footswitch was released
     if (gpio_get(FOOTSWITCH_GPIO)) {
