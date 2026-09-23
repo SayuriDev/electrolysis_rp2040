@@ -138,7 +138,7 @@ void oled_main_screen(void)
 
     u8g2_DrawStr(&u8g2, x, 56, buf);
 
-    float body_probe_voltage = mux_values[2] * 9.2f;
+    float body_probe_voltage = mux_values[2] * 9.22f;
     // TODO: show this on screen
 
     // time potentiometer
