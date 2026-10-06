@@ -3,6 +3,7 @@
 #include "probe.h"
 
 #define BUZZER_GPIO 0
+#define BUZZER_IDLE_LEVEL 1 // 1 = active-low
 #define FOOTSWITCH_GPIO 17
 
 #define I2C_PORT i2c0
@@ -16,10 +17,15 @@ static bool footswitch_was_pressed = false;
 
 static uint16_t *adc_values;
 
+static void buzzer_set(bool on) {
+    gpio_put(BUZZER_GPIO, on ? !BUZZER_IDLE_LEVEL : BUZZER_IDLE_LEVEL);
+}
+
 void probe_init(uint16_t *adc) {
     adc_values = adc;
 
     gpio_init(BUZZER_GPIO);
+    gpio_put(BUZZER_GPIO, BUZZER_IDLE_LEVEL);
     gpio_set_dir(BUZZER_GPIO, GPIO_OUT);
 
     gpio_init(FOOTSWITCH_GPIO);
@@ -31,7 +37,7 @@ static int64_t buzzer_off_callback(alarm_id_t id, void *user_data) {
     (void)id;
     (void)user_data;
 
-    gpio_put(BUZZER_GPIO, 0);
+    buzzer_set(false);
     buzzer_alarm = 0;
 
     return 0;
@@ -43,7 +49,7 @@ static void buzzer_beep(uint32_t duration_ms) {
         buzzer_alarm = 0;
     }
 
-    gpio_put(BUZZER_GPIO, 1);
+    buzzer_set(true);
 
     buzzer_alarm = add_alarm_in_ms(
         duration_ms,
@@ -129,7 +135,7 @@ void probe_update(void) {
             buzzer_alarm = 0;
         }
 
-        gpio_put(BUZZER_GPIO, 0);
+        buzzer_set(false);
         mcp4726_set_voltage(0);
     }
 
