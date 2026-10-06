@@ -27,6 +27,13 @@ target_link_libraries(${PROJECT_NAME}
     u8g2
 )
 
+pico_enable_stdio_usb(${PROJECT_NAME} 1)
+pico_enable_stdio_uart(${PROJECT_NAME} 0)
+
+pico_define_boot_stage2(boot2_is25 ${PICO_SDK_PATH}/src/rp2040/boot_stage2/boot2_is25lp080.S)
+pico_set_boot_stage2(${PROJECT_NAME} boot2_is25)
+target_compile_definitions(boot2_is25 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
+
 # no need to optimise for size as the project is relatively small
 target_compile_options(${PROJECT_NAME} PRIVATE
     -ffunction-sections
