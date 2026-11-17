@@ -6,15 +6,15 @@
 #include "oled.h"
 #include "probe.h"
 
-#define CHARGE_PUMP_1_GPIO 2  // slice 1, channel A
-#define CHARGE_PUMP_2_GPIO 3  // slice 1, channel B
+#define CHARGE_PUMP_1_GPIO 2 // slice 1, channel A
+#define CHARGE_PUMP_2_GPIO 3 // slice 1, channel B
 #define USER_BUTTON_GPIO 18
 #define SDA_GPIO 4
 #define SCL_GPIO 5
 
-#define MUX_S0_GPIO 12
+#define MUX_S0_GPIO 10
 #define MUX_S1_GPIO 11
-#define MUX_S2_GPIO 10
+#define MUX_S2_GPIO 12
 
 #define ADC_POTENTIOMETER_1_GPIO 26
 #define ADC_POTENTIOMETER_2_GPIO 27
@@ -29,8 +29,11 @@ static struct repeating_timer oled_timer;
 
 static uint16_t adc[3];
 static uint16_t mux[3];
+static float adc_filtered_f[3] = {0};
+static float mux_filtered_f[3] = {0};
 
-static void mux_init(void) {
+static void mux_init(void)
+{
     gpio_init(MUX_S0_GPIO);
     gpio_set_dir(MUX_S0_GPIO, GPIO_OUT);
 
@@ -41,7 +44,8 @@ static void mux_init(void) {
     gpio_set_dir(MUX_S2_GPIO, GPIO_OUT);
 }
 
-static void mux_select(uint8_t channel) { // channel range: 0-7 (A0-A7 pins)
+static void mux_select(uint8_t channel)
+{ // channel range: 0-7 (A0-A7 pins)
     gpio_put(MUX_S0_GPIO, channel & 1);
     gpio_put(MUX_S1_GPIO, (channel >> 1) & 1);
     gpio_put(MUX_S2_GPIO, (channel >> 2) & 1);
@@ -56,36 +60,80 @@ static void mux_select(uint8_t channel) { // channel range: 0-7 (A0-A7 pins)
  *   mux[1] -> battery_charging
  *   mux[2] -> positive probe
  */
-static void read_adc_values(uint16_t adc[3], uint16_t mux[3]) {
-    // adc channels 0-2
-    for (uint8_t i = 0; i < 3; i++) {
+static void read_adc_values(uint16_t adc[3], uint16_t mux[3])
+{
+    const float alpha = 0.15f;
+
+    // adc 0-2
+    for (uint8_t i = 0; i < 3; i++)
+    {
         adc_select_input(i);
-        adc[i] = adc_read();
+        uint32_t sum = 0;
+
+        // take 16 samples
+        for (uint8_t s = 0; s < 16; s++)
+        {
+            sum += adc_read();
+        }
+        uint16_t raw_oversampled = (uint16_t)(sum >> 4); // average from 16 samples
+
+        // EMA filter
+        if (adc_filtered_f[i] == 0.0f)
+        {
+            adc_filtered_f[i] = (float)raw_oversampled;
+        }
+        else
+        {
+            adc_filtered_f[i] = (alpha * (float)raw_oversampled) + ((1.0f - alpha) * adc_filtered_f[i]);
+        }
+
+        adc[i] = (uint16_t)(adc_filtered_f[i] + 0.5f);
     }
 
-    // mux channels 0-2
+    // mux 0-2
     adc_select_input(3);
-    for (uint8_t i = 0; i < 3; i++) {
+    for (uint8_t i = 0; i < 3; i++)
+    {
         mux_select(i);
-        busy_wait_us(1);
+        busy_wait_us(2);
         adc_read(); // dummy read
-        mux[i] = adc_read();
+
+        uint32_t sum = 0;
+        for (uint8_t s = 0; s < 16; s++)
+        {
+            sum += adc_read();
+        }
+        uint16_t raw_oversampled = (uint16_t)(sum >> 4);
+
+        // EMA filter
+        if (mux_filtered_f[i] == 0.0f)
+        {
+            mux_filtered_f[i] = (float)raw_oversampled;
+        }
+        else
+        {
+            mux_filtered_f[i] = (alpha * (float)raw_oversampled) + ((1.0f - alpha) * mux_filtered_f[i]);
+        }
+
+        mux[i] = (uint16_t)(mux_filtered_f[i] + 0.5f);
     }
 }
- 
-static bool adc_timer_callback(struct repeating_timer *t) {
+static bool adc_timer_callback(struct repeating_timer *t)
+{
     (void)t;
     read_adc_values(adc, mux);
     return true;
 }
 
-static bool oled_timer_callback(struct repeating_timer *t) {
+static bool oled_timer_callback(struct repeating_timer *t)
+{
     (void)t;
     oled_main_screen();
     return true;
 }
 
-int main() {
+int main()
+{
     adc_init();
     adc_gpio_init(ADC_POTENTIOMETER_1_GPIO);
     adc_gpio_init(ADC_POTENTIOMETER_2_GPIO);
@@ -112,21 +160,19 @@ int main() {
     gpio_set_function(SDA_GPIO, GPIO_FUNC_I2C);
     gpio_set_function(SCL_GPIO, GPIO_FUNC_I2C);
 
-    gpio_set_pulls(SDA_GPIO, true, false);
-    gpio_set_pulls(SCL_GPIO, true, false);
-
     gpio_init(USER_BUTTON_GPIO);
     gpio_set_dir(USER_BUTTON_GPIO, GPIO_IN);
     gpio_pull_up(USER_BUTTON_GPIO);
 
     oled_init(adc, mux);
-    
+
     probe_init(adc);
-    add_repeating_timer_us(100, adc_timer_callback, NULL, &adc_timer);
+    add_repeating_timer_us(50, adc_timer_callback, NULL, &adc_timer);
     add_repeating_timer_ms(100, oled_timer_callback, NULL, &oled_timer);
     // bool is_pressed = !gpio_get(USER_BUTTON_GPIO);
 
-    while (true) {
+    while (true)
+    {
         probe_update();
     }
 }
