@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "calc.h"
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/gpio.h"
@@ -130,58 +131,26 @@ void oled_main_screen(void)
 
     u8g2_ClearBuffer(&u8g2);
 
+    // current
     u8g2_SetFont(&u8g2, u8g2_font_helvB14_tr);
 
-    uint16_t current_pot_raw = adc_values[1];
-    uint16_t current_pot_scaled = ((uint32_t)current_pot_raw * 2000) / 4095; // 0–20, where 200 = 2.00 mA
-    uint16_t ma_whole = current_pot_scaled / 1000;                           // the part before the decimal point
-    uint16_t ma_frac = current_pot_scaled % 1000;                            // two digits after the decimal point
-    snprintf(buf, sizeof(buf), "%u.%u mA", ma_whole, ma_frac);
+    uint16_t ua = calc_current_ua(adc_values[1]);
+    snprintf(buf, sizeof(buf), "%u.%03u mA", ua / 1000, ua % 1000);
 
     int str_width = u8g2_GetStrWidth(&u8g2, buf);
-    int x = (128 - str_width) / 2;
-
-    u8g2_DrawStr(&u8g2, x, 56, buf);
+    u8g2_DrawStr(&u8g2, (128 - str_width) / 2, 56, buf);
 
     float body_probe_voltage = mux_values[2] * 9.22f;
     // TODO: show this on screen
 
-    // time potentiometer
-    u8g2_SetFont(&u8g2, u8g2_font_helvB12_tr);
-
-    uint16_t time_pot_raw = adc_values[0];
-    uint32_t time_pot_scaled = ((uint32_t)time_pot_raw * 1500) / 4095; // 0–1500, where 1500 = 15.00s
-
-    if (time_pot_scaled < 100)
-        time_pot_scaled = 100; // min 1.00s
-    if (time_pot_scaled > 1500)
-        time_pot_scaled = 1500; // 15.00s clamp
-
-    uint16_t secs_whole = time_pot_scaled / 100;
-    uint16_t secs_frac = time_pot_scaled % 100;
-
-    snprintf(buf, sizeof(buf), "%u.%us", secs_whole, secs_frac);
-
+    // time
+    uint32_t cs = calc_time_cs(adc_values[0]);
+    snprintf(buf, sizeof(buf), "%lu.%02lus", cs / 100, cs % 100);
     u8g2_DrawStr(&u8g2, 5, 15, buf);
 
     // battery
-    uint16_t bat_adc = mux_values[0];
-
-    uint16_t bat_adc_min = 2640;
-    uint16_t bat_adc_max = 3410;
-
-    uint16_t bat_val;
-
-    if (bat_adc <= bat_adc_min)
-        bat_val = 0;
-    else if (bat_adc >= bat_adc_max)
-        bat_val = 100;
-    else
-    {
-        bat_val = ((bat_adc - bat_adc_min) * 100) / (bat_adc_max - bat_adc_min);
-    }
-
     u8g2_DrawRFrame(&u8g2, 105, 5, 20, 10, 2);
+    uint16_t bat_val = calc_battery_percent(mux_values[0]);
 
     // battery blinking when low
     static uint32_t blink_timer = 0;

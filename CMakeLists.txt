@@ -17,6 +17,7 @@ add_executable(${PROJECT_NAME}
     src/main.c
     src/oled.c
     src/probe.c
+    src/calc.c
 )
 
 target_link_libraries(${PROJECT_NAME}
