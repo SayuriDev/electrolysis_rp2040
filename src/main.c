@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/i2c.h"
@@ -52,13 +53,13 @@ static void mux_select(uint8_t channel)
 }
 
 /*
- *   adc[0] -> potentiometer_1
- *   adc[1] -> potentiometer_2
- *   adc[2] -> probe
+-   adc[0] -> potentiometer_1
+-   adc[1] -> potentiometer_2
+-   adc[2] -> probe
  *
- *   mux[0] -> battery_voltage
- *   mux[1] -> battery_charging
- *   mux[2] -> positive probe
+-   mux[0] -> battery_voltage
+-   mux[1] -> battery_charging
+-   mux[2] -> positive probe
  */
 static void read_adc_values(uint16_t adc[3], uint16_t mux[3])
 {
@@ -118,11 +119,40 @@ static void read_adc_values(uint16_t adc[3], uint16_t mux[3])
         mux[i] = (uint16_t)(mux_filtered_f[i] + 0.5f);
     }
 }
+
 static bool adc_timer_callback(struct repeating_timer *t)
 {
     (void)t;
     read_adc_values(adc, mux);
     return true;
+}
+
+static void print_adc_debug(void)
+{
+    static uint32_t last_print_ms = 0;
+    uint32_t now_ms = to_ms_since_boot(get_absolute_time());
+    if (now_ms - last_print_ms < 250)
+    {
+        return;
+    }
+    last_print_ms = now_ms;
+
+    // 12-bit ADC: 0..4095 -> ~0..3.30V
+    float v_pot1 = adc[0] * 3.3f / 4095.0f;
+    float v_pot2 = adc[1] * 3.3f / 4095.0f;
+    float v_probe = adc[2] * 3.3f / 4095.0f;
+
+    float v_mux0 = mux[0] * 3.3f / 4095.0f;
+    float v_mux1 = mux[1] * 3.3f / 4095.0f;
+    float v_mux2 = mux[2] * 3.3f / 4095.0f;
+
+    printf("[ADC] pot1=%u (%.2fV) pot2=%u (%.2fV) probe28=%u (%.2fV) | mux0=%u (%.2fV) mux1=%u (%.2fV) mux2=%u (%.2fV)\n",
+           adc[0], v_pot1,
+           adc[1], v_pot2,
+           adc[2], v_probe,
+           mux[0], v_mux0,
+           mux[1], v_mux1,
+           mux[2], v_mux2);
 }
 
 static bool oled_timer_callback(struct repeating_timer *t)
@@ -134,6 +164,8 @@ static bool oled_timer_callback(struct repeating_timer *t)
 
 int main()
 {
+    stdio_init_all();
+
     adc_init();
     adc_gpio_init(ADC_POTENTIOMETER_1_GPIO);
     adc_gpio_init(ADC_POTENTIOMETER_2_GPIO);
@@ -143,6 +175,8 @@ int main()
 
     gpio_set_function(CHARGE_PUMP_1_GPIO, GPIO_FUNC_PWM);
     gpio_set_function(CHARGE_PUMP_2_GPIO, GPIO_FUNC_PWM);
+    gpio_set_drive_strength(CHARGE_PUMP_1_GPIO, GPIO_DRIVE_STRENGTH_12MA);
+    gpio_set_drive_strength(CHARGE_PUMP_2_GPIO, GPIO_DRIVE_STRENGTH_12MA);
 
     uint charge_pump_pwm_slice = pwm_gpio_to_slice_num(CHARGE_PUMP_1_GPIO);
     pwm_set_clkdiv(charge_pump_pwm_slice, 125.0f);
@@ -159,6 +193,8 @@ int main()
     i2c_init(I2C_PORT, I2C_BAUDRATE);
     gpio_set_function(SDA_GPIO, GPIO_FUNC_I2C);
     gpio_set_function(SCL_GPIO, GPIO_FUNC_I2C);
+    gpio_pull_up(SDA_GPIO);
+    gpio_pull_up(SCL_GPIO);
 
     gpio_init(USER_BUTTON_GPIO);
     gpio_set_dir(USER_BUTTON_GPIO, GPIO_IN);
@@ -167,12 +203,12 @@ int main()
     oled_init(adc, mux);
 
     probe_init(adc);
-    add_repeating_timer_us(50, adc_timer_callback, NULL, &adc_timer);
-    add_repeating_timer_ms(100, oled_timer_callback, NULL, &oled_timer);
-    // bool is_pressed = !gpio_get(USER_BUTTON_GPIO);
+    add_repeating_timer_us(500, adc_timer_callback, NULL, &adc_timer);
+    add_repeating_timer_ms(50, oled_timer_callback, NULL, &oled_timer);
 
     while (true)
     {
         probe_update();
+        print_adc_debug();
     }
 }

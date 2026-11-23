@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "calc.h"
+#include "probe.h"
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/gpio.h"
@@ -144,7 +145,10 @@ void oled_main_screen(void)
     // TODO: show this on screen
 
     // time
-    uint32_t cs = calc_time_cs(adc_values[0]);
+    uint32_t cs = probe_alarm_elapsed_cs();
+    if (cs == 0)
+        cs = calc_time_cs(adc_values[0]); // pedal up: show the set time
+
     snprintf(buf, sizeof(buf), "%lu.%02lus", cs / 100, cs % 100);
     u8g2_DrawStr(&u8g2, 5, 15, buf);
 
@@ -182,6 +186,10 @@ void oled_main_screen(void)
     {
         u8g2_DrawXBMP(&u8g2, 80, 1, 23, 28, charging_icon);
     }
+
+    u8g2_SetFont(&u8g2, u8g2_font_6x10_tr);
+    snprintf(buf, sizeof(buf), "17:%d 15:%d", gpio_get(17), gpio_get(15));
+    u8g2_DrawStr(&u8g2, 0, 32, buf);
 
     u8g2_SendBuffer(&u8g2);
 }

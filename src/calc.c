@@ -43,5 +43,5 @@ uint8_t calc_battery_percent(uint16_t bat_raw)
 
 float calc_probe_voltage(uint16_t mux_raw)
 {
-    return mux_raw * 9.22f;
+    return mux_raw * 7.29f;
 }
